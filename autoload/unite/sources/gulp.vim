@@ -62,7 +62,7 @@ function! s:source.async_gather_candidates(args, context) abort
 
     if exitval != 0
         let s:cache = []
-        let error = get(job_info.candidates, 0, 'No gulpfile found')
+        let error = empty(job_info.candidates) ? 'No gulpfile found' : 'Error: ' . join(job_info.candidates)
         return [{ 'word': substitute(error, '^\[[0-9:]\+\]', '', ''), 'source': 'gulp' }]
     endif
 
@@ -92,7 +92,12 @@ endfunction
 function! s:job_start(context, cmd) abort
 
    if !has('nvim')
-       let job = job_start(a:cmd, { 'callback': function('s:job_handler_vim') })
+       let cwd = getcwd()
+       if unite#util#is_windows() && cwd =~ '^\\\\'
+           execute 'lcd ' . $WINDIR
+       endif
+       let job = job_start([&shell, &shellcmdflag, a:cmd], { 'callback': function('s:job_handler_vim') })
+       execute 'lcd ' . cwd
        let job_id = s:id(job_getchannel(job))
        let job_info = s:job_info.get(job_id)
        let job_info.job_ref = job
